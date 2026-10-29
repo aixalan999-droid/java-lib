@@ -2,68 +2,13 @@
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.StringTokenizer;
-import java.util.Arrays;
+import java.util.Queue;
+import java.util.LinkedList;
 
-public class Solution {
-
-    static class Edge {
-        int u;
-        int v;
-        long weight;
-
-        Edge(int u, int v, long weight) {
-            this.u = u;
-            this.v = v;
-            this.weight = weight;
-        }
-    }
-
-    static class DSU {
-        int[] parent;
-        int[] size;
-        boolean[] hasOn;
-
-        DSU(int[] states) {
-            int n = states.length;
-            parent = new int[n];
-            size = new int[n];
-            hasOn = new boolean[n];
-
-            for (int i = 0; i < n; i++) {
-                parent[i] = i;
-                size[i] = 1;
-                hasOn[i] = states[i] == 1;
-            }
-        }
-
-        int find(int x) {
-            if (parent[x] != x) {
-                parent[x] = find(parent[x]);
-            }
-            return parent[x];
-        }
-
-        // 合并两个连通分量
-        void union(int a, int b) {
-            int ra = find(a);
-            int rb = find(b);
-
-            if (ra == rb) {
-                return;
-            }
-
-            if (size[ra] < size[rb]) {
-                int temp = ra;
-                ra = rb;
-                rb = temp;
-            }
-
-            parent[rb] = ra;
-            size[ra] += size[rb];
-            hasOn[ra] = hasOn[ra] || hasOn[rb];
-        }
-    }
+class Solution {
 
     public static void main(String[] args) throws IOException {
         BufferedReader br = new BufferedReader(
@@ -71,58 +16,59 @@ public class Solution {
 
         int n = Integer.parseInt(br.readLine().trim());
 
-        int[] states = new int[n];
         StringTokenizer st = new StringTokenizer(br.readLine());
+        int q = Integer.parseInt(st.nextToken());
+        int k = Integer.parseInt(st.nextToken());
+
+        // 建立有向图：user1 -> user2
+        List<Integer>[] graph = new ArrayList[n];
 
         for (int i = 0; i < n; i++) {
-            states[i] = Integer.parseInt(st.nextToken());
+            graph[i] = new ArrayList<>();
         }
 
-        int m = Integer.parseInt(br.readLine().trim());
+        for (int i = 0; i < q; i++) {
+            st = new StringTokenizer(br.readLine());
 
-        long[] dist = new long[m];
-        st = new StringTokenizer(br.readLine());
+            int user1 = Integer.parseInt(st.nextToken());
+            int user2 = Integer.parseInt(st.nextToken());
 
-        for (int i = 0; i < m; i++) {
-            dist[i] = Long.parseLong(st.nextToken());
+            graph[user1].add(user2);
         }
 
-        // 每台相邻设备之间建立一条候选电缆边
-        Edge[] edges = new Edge[n - 1];
+        int bestUser = 0;
+        int maxWalls = -1;
 
-        for (int i = 0; i < n - 1; i++) {
-            edges[i] = new Edge(
-                    i,
-                    i + 1,
-                    dist[i + 1] - dist[i]
-            );
-        }
+        // 分别计算每个用户能够传播到的用户数量
+        for (int start = 0; start < n; start++) {
+            boolean[] visited = new boolean[n];
+            Queue<Integer> queue = new LinkedList<>();
 
-        // 优先考虑电缆长度较短的连接
-        Arrays.sort(edges,
-                (a, b) -> Long.compare(a.weight, b.weight));
+            queue.offer(start);
+            visited[start] = true;
 
-        DSU dsu = new DSU(states);
-        long answer = 0;
+            int count = 0;
 
-        for (Edge edge : edges) {
-            int u = dsu.find(edge.u);
-            int v = dsu.find(edge.v);
+            while (!queue.isEmpty()) {
+                int current = queue.poll();
+                count++;
 
-            if (u == v) {
-                continue;
+                for (int friend : graph[current]) {
+                    if (!visited[friend]) {
+                        visited[friend] = true;
+                        queue.offer(friend);
+                    }
+                }
             }
 
-            // 两个连通分量都已经有通电设备，
-            // 无须再连接它们
-            if (dsu.hasOn[u] && dsu.hasOn[v]) {
-                continue;
+            // 如果传播范围更大，则更新答案
+            // 相同数量时保留较小的用户 ID
+            if (count > maxWalls) {
+                maxWalls = count;
+                bestUser = start;
             }
-
-            answer += edge.weight;
-            dsu.union(u, v);
         }
 
-        System.out.println(answer);
+        System.out.println(bestUser);
     }
 }
